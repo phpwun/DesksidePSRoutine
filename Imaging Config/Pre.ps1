@@ -12,7 +12,7 @@ Start-Process -Wait -FilePath 'C:\temp\(Remote Software Name 2 Goes Here).exe' -
 Write-Output "Finished." 
 
 #Installs Chrome
-Invoke-WebRequest -Uri "https://dl.google.com/chrome/install/ChromeStandaloneSetup64.exe" -OutFile "$PSScriptRoot\ChromeStandaloneSetup64.exe"; & -Wait "$PSScriptRoot\ChromeStandaloneSetup64.exe" /silent /install
+Invoke-WebRequest -Uri "https://dl.google.com/chrome/install/ChromeStandaloneSetup64.exe" -OutFile "C:\temp\copy 2 temp in C\ChromeStandaloneSetup64.exe"; & -Wait "C:\temp\copy 2 temp in C\ChromeStandaloneSetup64.exe" /silent /install
 
 # Part 2
 #defines the architecture of the device as either 32 or 64 bit
