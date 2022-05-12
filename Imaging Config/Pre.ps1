@@ -47,12 +47,13 @@ function Main{ #Install Programs and Initiate DellCommandUpdate
     & $a /applyUpdates -outputLog='C:\dell\logs\applyUpdates.log'
 }
 
+#Runtime Function
 function FinishUp {
     param ([string]$Name)
     Main
     Rename-Computer -NewName $Name -Force -Passthru
     Remove-Item 'C:\Windows\System32\Recovery\ReAgent.xml' -Force -Confirm:$false
-    Restart-Computer -
+    Restart-Computer
 }
 
 
