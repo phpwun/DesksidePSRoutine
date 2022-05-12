@@ -21,12 +21,13 @@ curl -LO hhttps://github.com/phpwun/powershell.git
 
 Drag and drop the first file below:
 
+```
 - Pre.ps1
-
+```
 Onto:
-
+```
 - Run-As-Admin.bat
-
+```
 Profit?
 
 ## Support
