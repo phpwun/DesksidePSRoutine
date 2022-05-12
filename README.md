@@ -14,7 +14,7 @@ A post imaging powershell script designed to make the process easier and faster
 Download both files:
 
 ```sh
-curl -LO hhttps://github.com/phpwun/powershell.git
+curl -LO https://github.com/phpwun/HAPost-Image.git
 ```
 
 ## Usage
