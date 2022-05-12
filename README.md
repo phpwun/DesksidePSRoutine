@@ -1,4 +1,4 @@
-# README Powershell
+# HAPost-Image Powershell Suite
 
 A post imaging powershell script designed to make the process easier and faster
 
