@@ -54,6 +54,15 @@
     }
     #Clears all Non-Admin Users and Runs Disk Cleanup aswell as Defrag.
     function RoutineClear { #Source: https://stackoverflow.com/questions/28852786/automate-process-of-disk-cleanup-cleanmgr-exe-without-user-intervention
+
+      $ErrorActionPreference='silentlycontinue'
+      $path = 'C:\Users'
+      $excluded = 'haitadmin','Public','Onward','Administrator'
+      Get-ChildItem $path -Exclude $excluded -Include *.* -Recurse -Force | ForEach  { $_.Delete()}
+      Get-ChildItem $path -Exclude $excluded -Force | ForEach   { $_.Delete()}
+      Get-ChildItem $path
+      Read-Host -Prompt "Press Enter"
+
       Write-Host 'Clearing CleanMgr.exe automation settings.'
       Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\*' -Name StateFlags0001 -ErrorAction SilentlyContinue | Remove-ItemProperty -Name StateFlags0001 -ErrorAction SilentlyContinue
 
