@@ -16,8 +16,8 @@
     }
     function AcceptFile($type, $where) {
         Add-Type -AssemblyName System.Windows.Forms
-        $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
-        InitialDirectory = [Environment]::GetFolderPath($where)  
+        $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{
+        InitialDirectory = [Environment]::GetFolderPath($where)
         Filter = $type
         }
     $null = $FileBrowser.ShowDialog()
@@ -40,7 +40,7 @@
                 Copy-Item -Path "E:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force
             }
             elseif (Test-Path D:) {
-                Copy-Item -Path "D:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force 
+                Copy-Item -Path "D:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force
             }
             }
             else {
@@ -53,28 +53,55 @@
         }
     }
     #Clears all Non-Admin Users and Runs Disk Cleanup aswell as Defrag.
-    function RoutineClear {
-        
+    function RoutineClear { #Source: https://stackoverflow.com/questions/28852786/automate-process-of-disk-cleanup-cleanmgr-exe-without-user-intervention
+      Write-Host 'Clearing CleanMgr.exe automation settings.'
+      Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\*' -Name StateFlags0001 -ErrorAction SilentlyContinue | Remove-ItemProperty -Name StateFlags0001 -ErrorAction SilentlyContinue
+
+      Write-Host 'Enabling Update Cleanup. This is done automatically in Windows 10 via a scheduled task.'
+      New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Update Cleanup' -Name StateFlags0001 -Value 2 -PropertyType DWord
+
+      Write-Host 'Enabling Temporary Files Cleanup.'
+      New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files' -Name StateFlags0001 -Value 2 -PropertyType DWord
+
+      Write-Host 'Starting CleanMgr.exe...'
+      Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1 /verylowdisk /AUTOCLEAN' -WindowStyle Hidden -Wait
+
+      Write-Host 'Waiting for CleanMgr and DismHost processes. Second wait neccesary as CleanMgr.exe spins off separate processes.'
+      Get-Process -Name cleanmgr,dismhost -ErrorAction SilentlyContinue | Wait-Process
+
+      Optimize-Volume -DriveLetter C -ReTrim -Verbose
+      Optimize-Volume -DriveLetter C -Defrag -Verbose
+
+      $UpdateCleanupSuccessful = $false
+      if (Test-Path $env:SystemRoot\Logs\CBS\DeepClean.log) {
+          $UpdateCleanupSuccessful = Select-String -Path $env:SystemRoot\Logs\CBS\DeepClean.log -Pattern 'Total size of superseded packages:' -Quiet
+      }
+
+      if ($UpdateCleanupSuccessful) {
+          Write-Host 'Rebooting to complete CleanMgr.exe Update Cleanup....'
+          SHUTDOWN.EXE /r /f /t 0 /c 'Rebooting to complete CleanMgr.exe Update Cleanup....'
+      }
     }
     #Runs through the IT Post imaging checklist, minus domain assignment and setting default apps.
     function PostImage{ #Install Programs and Initiate DellCommandUpdate
 
         #Move Temp Folder
         MTemp $true
-        
+
         #Chrome (Will need to be swapped out when they stop serving this version link)
         $LocalTempDir = $env:TEMP; $ChromeInstaller = "ChromeInstaller.exe"; (new-object System.Net.WebClient).DownloadFile('http://dl.google.com/chrome/install/375.126/chrome_installer.exe', "$LocalTempDir\$ChromeInstaller"); & "$LocalTempDir\$ChromeInstaller" /silent /install; $Process2Monitor =  "ChromeInstaller"; Do { $ProcessesFound = Get-Process | ?{$Process2Monitor -contains $_.Name} | Select-Object -ExpandProperty Name; If ($ProcessesFound) { "Still running: $($ProcessesFound -join ', ')" | Write-Host; Start-Sleep -Seconds 2 } else { rm "$LocalTempDir\$ChromeInstaller" -ErrorAction SilentlyContinue -Verbose } } Until (!$ProcessesFound)
-        Write-Output "Finished Chrome Intallation." 
-        
+        Write-Output "Finished Chrome Intallation."
+
         #DellCommandUpdate
         $a=DCULocation $true; & $a /configure silent '-autoSuspendBitLocker=enable -userConsent=disable'; & $a /scan -outputLog='C:\dell\logs\scan.log'; & $a /applyUpdates -outputLog='C:\dell\logs\applyUpdates.log'
-        
+
         #Rename Device to Service Tag Number
         Rename-Computer -NewName (Get-WmiObject -class win32_bios).SerialNumber -Force -Passthru
-        
+
         #Bitlocker Pre-Emptive
         Remove-Item 'C:\Windows\System32\Recovery\ReAgent.xml' -Force -Confirm:$false
 
+        #Finishing Up
         Write-Output 'After Reboot Ensure that you join the device to the cho.ha.local network, reboot again and enable bitlocker.'
         Restart-Computer
     }
@@ -94,7 +121,7 @@ do {
     $input = Read-Host
     switch ($input)
     {
-        '1' {               
+        '1' {
                 RoutineClear
             }
         '2' {
