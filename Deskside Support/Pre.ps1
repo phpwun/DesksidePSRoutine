@@ -27,59 +27,25 @@
     function Show-Menu {
         Write-Host "
         1: Clear Users and Run Defragmentation and Disk Cleanup
-        2: Preform Post-Imaging Checklist (This option will restart the device) Add to domain and bitlocker after reboot
+        2: Preform Post-Imaging Checklist (Add to domain and bitlocker after reboot)
         3: Move a Group of Devices within AD
         Q: Press 'Q' to quit."
     }
 
 #Actionable Functions
-    #Copy or Delete Installer Folder into C:/temp
-    function MTemp($Copy = $false) {
-        iF ($Copy -eq "$true") {
-            If (Test-Path E:) {
-                Copy-Item -Path "E:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force
-            }
-            elseif (Test-Path D:) {
-                Copy-Item -Path "D:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force
-            }
-            }
-            else {
-            If (Test-Path E:) {
-                Delete-File -Path "E:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force
-            }
-            elseif (Test-Path D:) {
-                Delete-File -Path "D:\copy 2 temp in C" -Destination "C:\temp" -recurse -Force
-            }
-        }
-    }
     #Clears all Non-Admin Users and Runs Disk Cleanup aswell as Defrag.
     function RoutineClear { #Source: https://stackoverflow.com/questions/28852786/automate-process-of-disk-cleanup-cleanmgr-exe-without-user-intervention
-
-      $ErrorActionPreference='silentlycontinue'
-      $path = 'C:\Users'
-      $excluded = 'haitadmin','Public','Onward','Administrator'
-      Get-ChildItem $path -Exclude $excluded -Include *.* -Recurse -Force | ForEach  { $_.Delete()}
-      Get-ChildItem $path -Exclude $excluded -Force | ForEach   { $_.Delete()}
-      Get-ChildItem $path
-      Read-Host -Prompt "Press Enter"
-
-      Write-Host 'Clearing CleanMgr.exe automation settings.'
-      Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\*' -Name StateFlags0001 -ErrorAction SilentlyContinue | Remove-ItemProperty -Name StateFlags0001 -ErrorAction SilentlyContinue
-
-      Write-Host 'Enabling Update Cleanup. This is done automatically in Windows 10 via a scheduled task.'
-      New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Update Cleanup' -Name StateFlags0001 -Value 2 -PropertyType DWord
-
-      Write-Host 'Enabling Temporary Files Cleanup.'
-      New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files' -Name StateFlags0001 -Value 2 -PropertyType DWord
-
-      Write-Host 'Starting CleanMgr.exe...'
-      Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1 /verylowdisk /AUTOCLEAN' -WindowStyle Hidden -Wait
-
+      Write-Host 'Clearing CleanMgr Settings and Enabling Extra CleanUp'
+        Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\*' -Name StateFlags0001 -ErrorAction SilentlyContinue | Remove-ItemProperty -Name StateFlags0001 -ErrorAction SilentlyContinue
+        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Update Cleanup' -Name StateFlags0001 -Value 2 -PropertyType DWord
+        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files' -Name StateFlags0001 -Value 2 -PropertyType DWord
+      Write-Host 'Starting.'
+        Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1 /verylowdisk /AUTOCLEAN' -WindowStyle Hidden -Wait
       Write-Host 'Waiting for CleanMgr and DismHost processes. Second wait neccesary as CleanMgr.exe spins off separate processes.'
-      Get-Process -Name cleanmgr,dismhost -ErrorAction SilentlyContinue | Wait-Process
-
-      Optimize-Volume -DriveLetter C -ReTrim -Verbose
-      Optimize-Volume -DriveLetter C -Defrag -Verbose
+        Get-Process -Name cleanmgr,dismhost -ErrorAction SilentlyContinue | Wait-Process
+      Write-Host 'Defragmentation Begining.'
+        Optimize-Volume -DriveLetter C -ReTrim -Verbose
+        Optimize-Volume -DriveLetter C -Defrag -Verbose
 
       $UpdateCleanupSuccessful = $false
       if (Test-Path $env:SystemRoot\Logs\CBS\DeepClean.log) {
@@ -87,15 +53,12 @@
       }
 
       if ($UpdateCleanupSuccessful) {
-          Write-Host 'Rebooting to complete CleanMgr.exe Update Cleanup....'
-          SHUTDOWN.EXE /r /f /t 0 /c 'Rebooting to complete CleanMgr.exe Update Cleanup....'
+          Write-Host 'Rebooting.'
+          SHUTDOWN.EXE /r /f /t 0 /c
       }
     }
     #Runs through the IT Post imaging checklist, minus domain assignment and setting default apps.
     function PostImage{ #Install Programs and Initiate DellCommandUpdate
-
-        #Move Temp Folder
-        MTemp $true
 
         #Chrome (Will need to be swapped out when they stop serving this version link)
         $LocalTempDir = $env:TEMP; $ChromeInstaller = "ChromeInstaller.exe"; (new-object System.Net.WebClient).DownloadFile('http://dl.google.com/chrome/install/375.126/chrome_installer.exe', "$LocalTempDir\$ChromeInstaller"); & "$LocalTempDir\$ChromeInstaller" /silent /install; $Process2Monitor =  "ChromeInstaller"; Do { $ProcessesFound = Get-Process | ?{$Process2Monitor -contains $_.Name} | Select-Object -ExpandProperty Name; If ($ProcessesFound) { "Still running: $($ProcessesFound -join ', ')" | Write-Host; Start-Sleep -Seconds 2 } else { rm "$LocalTempDir\$ChromeInstaller" -ErrorAction SilentlyContinue -Verbose } } Until (!$ProcessesFound)
@@ -104,15 +67,26 @@
         #DellCommandUpdate
         $a=DCULocation $true; & $a /configure silent '-autoSuspendBitLocker=enable -userConsent=disable'; & $a /scan -outputLog='C:\dell\logs\scan.log'; & $a /applyUpdates -outputLog='C:\dell\logs\applyUpdates.log'
 
-        #Rename Device to Service Tag Number
-        Rename-Computer -NewName (Get-WmiObject -class win32_bios).SerialNumber -Force -Passthru
+        #Hopefully adding device to domain
+        $cred = Get-credential
+        $SerialName = (Get-WmiObject -class win32_bios).SerialNumber
+        $Parameters = @{
+            "DomainName" = "cho.ha.local"
+            "NewName" = $SerialName
+            "Credential" = "$cred"
+            "Server" = "cho.ha.local\20816DC02"
+            "OUPath" = "OU=*New Computers,DC=cho,DC=ha,DC=local"
+            "Restart" = $false
+            "Force" = $true
+        }
+        Add-Computer $Parameters
 
         #Bitlocker Pre-Emptive
         Remove-Item 'C:\Windows\System32\Recovery\ReAgent.xml' -Force -Confirm:$false
 
         #Finishing Up
-        Write-Output 'After Reboot Ensure that you join the device to the cho.ha.local network, reboot again and enable bitlocker.'
-        Restart-Computer
+        #Write-Output 'After Reboot Ensure that you join the device to the cho.ha.local network, reboot again and enable bitlocker.'
+        #Restart-Computer
     }
     #Assigns a csv list of service tags to the HA Laptops OU (Needs to be changed to be a modular OU)
     function ADOUChange{
