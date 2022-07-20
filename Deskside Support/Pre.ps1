@@ -1,4 +1,4 @@
-#Deskside CMDLT v.01
+#Deskside CMDLT v.023
 
 #Global Variables
     #Identifies if the device is #64 Bit or #32 Bit
@@ -26,36 +26,21 @@
     #Displays A List of Options for the User
     function Show-Menu {
         Write-Host "
-        1: Clear Users and Run Defragmentation and Disk Cleanup
-        2: Preform Post-Imaging Checklist (Add to domain and bitlocker after reboot)
-        3: Move a Group of Devices within AD
-        Q: Press 'Q' to quit."
+        Deskside Support Options
+          1:
+            Clean-Device
+          2:
+            Post-Imaging (Add to domain and bitlocker after reboot)
+          3:
+            AD-DS Device Group Mover
+          E:
+            Exit Script."
     }
 
 #Actionable Functions
     #Clears all Non-Admin Users and Runs Disk Cleanup aswell as Defrag.
-    function RoutineClear { #Source: https://stackoverflow.com/questions/28852786/automate-process-of-disk-cleanup-cleanmgr-exe-without-user-intervention
-      Write-Host 'Clearing CleanMgr Settings and Enabling Extra CleanUp'
-        Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\*' -Name StateFlags0001 -ErrorAction SilentlyContinue | Remove-ItemProperty -Name StateFlags0001 -ErrorAction SilentlyContinue
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Update Cleanup' -Name StateFlags0001 -Value 2 -PropertyType DWord
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files' -Name StateFlags0001 -Value 2 -PropertyType DWord
-      Write-Host 'Starting.'
-        Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1 /verylowdisk /AUTOCLEAN' -WindowStyle Hidden -Wait
-      Write-Host 'Waiting for CleanMgr and DismHost processes. Second wait neccesary as CleanMgr.exe spins off separate processes.'
-        Get-Process -Name cleanmgr,dismhost -ErrorAction SilentlyContinue | Wait-Process
-      Write-Host 'Defragmentation Begining.'
-        Optimize-Volume -DriveLetter C -ReTrim -Verbose
-        Optimize-Volume -DriveLetter C -Defrag -Verbose
+    function RoutineClear {
 
-      $UpdateCleanupSuccessful = $false
-      if (Test-Path $env:SystemRoot\Logs\CBS\DeepClean.log) {
-          $UpdateCleanupSuccessful = Select-String -Path $env:SystemRoot\Logs\CBS\DeepClean.log -Pattern 'Total size of superseded packages:' -Quiet
-      }
-
-      if ($UpdateCleanupSuccessful) {
-          Write-Host 'Rebooting.'
-          SHUTDOWN.EXE /r /f /t 0 /c
-      }
     }
     #Runs through the IT Post imaging checklist, minus domain assignment and setting default apps.
     function PostImage{ #Install Programs and Initiate DellCommandUpdate
@@ -113,10 +98,10 @@ do {
         '3' {
                 ADOUChange
             }
-        'q' {
+        'e' {
                  return
             }
     }
     pause
 }
-until ($input -eq 'q')
+until ($input -eq 'e')
