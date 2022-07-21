@@ -22,3 +22,7 @@ function RoutineClear { #Source: https://stackoverflow.com/questions/28852786/au
   }
 }
 #Runs through the IT Post imaging checklist, minus domain assignment and setting default apps.
+
+Run as admin.bad
+PowerShell -NoProfile -ExecutionPolicy Unrestricted -Command "& {Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Unrestricted -File ""%1""' -Verb RunAs}";
+pause
