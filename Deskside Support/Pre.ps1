@@ -1,4 +1,11 @@
 #Deskside CMDLT v.023
+#To-Do
+  #Chrome Will Eventually Stop Serving That link
+    #Fix Chrome Install
+  #Fix RoutineClear Function
+    #Find it, its on the server somewhere
+  #Fix AD delegation so domain assosiations and Bitlocker work.
+
 
 #Global Variables
     #Identifies if the device is #64 Bit or #32 Bit
@@ -53,18 +60,23 @@
         $a=DCULocation $true; & $a /configure silent '-autoSuspendBitLocker=enable -userConsent=disable'; & $a /scan -outputLog='C:\dell\logs\scan.log'; & $a /applyUpdates -outputLog='C:\dell\logs\applyUpdates.log'
 
         #Hopefully adding device to domain
-        $cred = Get-credential
+        #$cred = Get-credential
+        #$SerialName = (Get-WmiObject -class win32_bios).SerialNumber
+        #$Parameters = @{
+        #    "DomainName" = "cho.ha.local"
+        #    "NewName" = $SerialName
+        #    "Credential" = "$cred"
+        #    "Server" = "cho.ha.local\20816DC02"
+        #    "OUPath" = "OU=*New Computers,DC=cho,DC=ha,DC=local"
+        #    "Restart" = $false
+        #    "Force" = $true
+        #}
+        #Add-Computer $Parameters
+
         $SerialName = (Get-WmiObject -class win32_bios).SerialNumber
-        $Parameters = @{
-            "DomainName" = "cho.ha.local"
-            "NewName" = $SerialName
-            "Credential" = "$cred"
-            "Server" = "cho.ha.local\20816DC02"
-            "OUPath" = "OU=*New Computers,DC=cho,DC=ha,DC=local"
-            "Restart" = $false
-            "Force" = $true
-        }
-        Add-Computer $Parameters
+        Rename-Computer -NewName $SerialName
+        sleep 5
+        Add-Computer -DomainName "cho.ha.local" -Force -Options JoinWithNewName,accountcreate
 
         #Bitlocker Pre-Emptive
         Remove-Item 'C:\Windows\System32\Recovery\ReAgent.xml' -Force -Confirm:$false
