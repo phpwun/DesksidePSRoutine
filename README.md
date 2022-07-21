@@ -1,6 +1,6 @@
 # HAPost-Image Powershell Suite
 
-A post imaging powershell script designed to make the process easier and faster
+A post imaging power-shell script designed to make the process of bringing re-imaged devices online easier and faster.
 
 ## Table of Contents
 
@@ -12,21 +12,15 @@ A post imaging powershell script designed to make the process easier and faster
 ## Installation
 
 Download both files:
-
-```sh
-curl -LO https://github.com/phpwun/HAPost-Image.git
+```
+Pre.ps1, RunTheAdmin.bat
 ```
 
 ## Usage
 
-Drag and drop the first file below:
-
-- Pre.ps1
-
-Onto:
-- Run-As-Admin.bat
-
-Profit?
+Ensure both files are within the same directory.
+Run the ```RunTheAdmin.bat``` as an administrator.
+Profit.
 
 ## Support
 
